@@ -69,5 +69,12 @@ sum(genes_passing_lesional, na.rm = TRUE) #23346
 
 normalized_counts_filtered = normalized_counts[which(genes_passing_normal==TRUE | genes_passing_lesional==TRUE), ] # filter normalized counts by genes passing sample threshold in normal or lesional
 
+# Generate an object that contains the library-size normalized log-CPM data. Save it as a binary file (.rda or .rds).
+# The equivalent to library-size normalized log-CPM data using DESeq2 is the vst (variance stabilizing transformations) data.
+# unclear if instructions refer to filtered or unfiltered data, doing both.
 
+vst_normalized_counts = assay(vst(dds)) # vst for unfiltered data
+vst_normalized_counts_filtered = vst_normalized_counts[which(rownames(vst_normalized_counts) %in% rownames(normalized_counts_filtered)), ] # filter vst data genes by the previously filtered data
 
+save(vst_normalized_counts, file = "vst_normalized_counts_unfiltered.rda")
+save(vst_normalized_counts_filtered, file = "vst_normalized_counts_filtered.rda")
