@@ -78,3 +78,56 @@ vst_normalized_counts_filtered = vst_normalized_counts[which(rownames(vst_normal
 
 save(vst_normalized_counts, file = "vst_normalized_counts_unfiltered.rda")
 save(vst_normalized_counts_filtered, file = "vst_normalized_counts_filtered.rda")
+
+#Generate basic plots of your choice to investigate its main properties (library sizes, densities, PCA coloured by group, etc...).
+  # library sizes: 
+    # test variance between normal and lesional samples: significantly unequal
+    # t.test: p-value = 3.403e-09
+
+library(ggplot2)
+library(ggsignif)
+
+lib_size_vst_norm_filt = data.frame("library_size" = colSums(vst_normalized_counts_filtered),
+                                    "type" = sample_annotations$type)
+var.test(lib_size_vst_norm_filt$library_size[which(lib_size_vst_norm_filt$type == "normal")], 
+         lib_size_vst_norm_filt$library_size[which(lib_size_vst_norm_filt$type == "lesional")], 
+         alternative = "two.sided")
+lib_size_ttest = t.test(lib_size_vst_norm_filt$library_size ~ lib_size_vst_norm_filt$type)
+
+ggplot(lib_size_vst_norm_filt, aes(type, library_size)) +
+  geom_violin(scale = "area") +
+  labs(title = "Library Sizes for Filtered Data with T.Test", x = "sample type", y = "library size (vst normalized)") +
+  geom_boxplot(width=0.1, color="black", alpha=0.2) +
+  geom_signif(comparisons = list(c("normal", "lesional")),   
+              map_signif_level=TRUE, annotation = c(signif(lib_size_ttest$p.value, digits=3)))
+
+  # densities:
+
+library(affy)
+plotDensity(vst_, col=rep(myColors, each=3),
+            lty=c(1:ncol(counts)), xlab='Log2(count)',
+            main='Expression Distribution')
+
+ggplot(vst_normalized_counts_filtered, aes(x=vst_normalized_counts_filtered[,1])) +
+  geom_density()
+
+  # PCA:
+
+library(ggbiplot)
+
+PCA_01 = prcomp(t(vst_normalized_counts_filtered))
+summary(PCA_01)
+
+ggbiplot(PCA_01, 
+         choices = c(1,2), 
+         var.axes = F,
+         obs.scale = 1, 
+         var.scale = 1,
+         groups = sample_annotations$type
+         ) +
+  ggtitle("Principal Component Analysis")
+
+PCA_01$x[,1:2]
+
+PC1genenames_pos = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=TRUE)[1:10])) # get 10 most positively influential genes for PC1
+PC1genenames_neg = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=FALSE)[1:10]))
