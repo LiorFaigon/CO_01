@@ -194,3 +194,10 @@ par(mfrow=c(1,1)) #reset par
 with(res_tab, plot(log2FoldChange, -log10(pvalue), pch=20, main="Volcano Plot")) # Make the volcano plot
 with(subset(res_tab, padj<.01 & abs(log2FoldChange)>1 ), points(log2FoldChange, -log10(pvalue), pch=20, col="blue")) # overlay with significant genes
 with(res_tab[ res_tab$ENSEMBL %in% most_sig, ], points(log2FoldChange, -log10(pvalue), pch=20, col="red")) #overlay with 100 most significant genes
+
+# Export list of significantly upregulated genes for gene set enrichment analysis in DAVID
+
+sig_up = res_tab[res_tab$`log2FC>|1|` == "UP", 1]
+sig_up = sig_up[!is.na(sig_up)]
+write.csv(sig_up,"significantly_upregulated_genes.csv", row.names = FALSE)
+write.csv(as.character(gene_annotations_entries),"background_genes.csv", row.names = FALSE) #add background genes for Gene ontology enrichment analysis
