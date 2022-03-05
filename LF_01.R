@@ -125,6 +125,9 @@ ggbiplot(PCA_01,
          ) +
   ggtitle("Principal Component Analysis")
 
+PC1genenames_pos = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=TRUE)[1:10])) # get 10 most positively influential genes for PC1
+PC1genenames_neg = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=FALSE)[1:10])) # get 10 most negatively influential genes for PC1
+
 # The PCA plot may suggest the presence of outlier/mis-labeled samples in this dataset. Try to identify them and remove them from the downstream analysis.
   #PCA suggests 1 mislabeled sample, no obvious outliers. checking for more mislabeled samples along suggested cluster coordinates
 
@@ -136,6 +139,17 @@ PC_dim_12[which(PC_dim_12$PC1 < 0 & PC_dim_12$type == "lesional"), ] # found 1 m
 vst_normalized_counts_filtered = vst_normalized_counts_filtered[ , ! colnames(vst_normalized_counts_filtered) %in% c("SRR1146216")]
 save(vst_normalized_counts_filtered, file = "vst_normalized_counts_filtered.rda") #update filtered file
 
+#Run a differential expression analysis comparing lesional vs normal samples. This can be done according to your preference either on the count data or the normalized log-CPM data, using appropriate statistical method.
 
-PC1genenames_pos = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=TRUE)[1:10])) # get 10 most positively influential genes for PC1
-PC1genenames_neg = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=FALSE)[1:10]))
+raw_counts_rowid_filtered = raw_counts_rowid[ raw_counts_rowid$ENSEMBL %in% rownames(vst_normalized_counts_filtered), 
+                                              ! colnames(raw_counts_rowid) %in% c("SRR1146216")]
+sample_annotations_rowid_filtered = sample_annotations_rowid[ sample_annotations_rowid$SAMPLE_ID %in% colnames(vst_normalized_counts_filtered), ]
+dds_filt = DESeqDataSetFromMatrix(countData=raw_counts_rowid_filtered, 
+                                  colData=sample_annotations_rowid_filtered, 
+                                  design=~type, tidy = TRUE)
+dds_filt = DESeq(dds_filt)
+
+#Export the results in a tab-separated text/CSV file: a table with genes in rows along with gene annotations and any relevant statistic.
+
+res <- results(dds)
+
