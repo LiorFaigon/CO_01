@@ -149,18 +149,41 @@ dds_filt = DESeqDataSetFromMatrix(countData=raw_counts_rowid_filtered,
                                   design=~type, tidy = TRUE)
 dds_filt = DESeq(dds_filt)
 
-#Export the results in a tab-separated text/CSV file: a table with genes in rows along with gene annotations and any relevant statistic.
-
 res = results(dds_filt)
 summary(res)
+plotMA(res) #most points on y=0 intercept and skewed lower as expected.
+plotDispEsts(dds_filt) #data scattered around curve as expected.
+
+#Export the results in a tab-separated text/CSV file: a table with genes in rows along with gene annotations and any relevant statistic.
+
 res_tab = head(results(dds_filt, tidy=TRUE), n = length(rownames(vst_normalized_counts_filtered)))
-colnames(res_tab)[1] = "ENSEMBL"
-res_tab_DE = res_tab[ , ]
-res_tab$"padj<0.01" = res_tab$padj<0.01
+colnames(res_tab)[1] = "ENSEMBL" #change colname from default
+res_tab$"padj<0.01" = res_tab$padj<0.01 # add column for significantly DE genes
 
-res_tab$"log2FC>|1|"[res_tab$padj<0.01 & res_tab$log2FoldChange > 1] = "UP"
-res_tab$"log2FC>|1|"[res_tab$padj<0.01 & res_tab$log2FoldChange < -1] = "DOWN"
-
-table$size[table$population>=500 & table$population<1000]<-2
+res_tab$"log2FC>|1|"[res_tab$padj<0.01 & res_tab$log2FoldChange > 1] = "UP" # add column for significantly DE genes passing logFC threshold upregulated
+res_tab$"log2FC>|1|"[res_tab$padj<0.01 & res_tab$log2FoldChange < -1] = "DOWN" # add column for significantly DE genes passing logFC threshold downregulated
 
 res_tab = merge(res_tab,gene_annotations_supplemented,by="ENSEMBL") # merge DE results with gene annotations to include genes with missing annotations
+write.csv(res_tab,"differential_expression_res.csv", row.names = FALSE)
+
+#Select the top 100 most significant *annotated* genes and generate a heatmap of the log-CPM data, with samples in columns, annotated with the group variable.
+  #(DESeq2 VST normalized counts data)
+library(genefilter)
+library(RColorBrewer)
+
+sig_genes = res_tab[(res_tab$`log2FC>|1|` == "UP" | res_tab$`log2FC>|1|` == "DOWN") & res_tab$NAME != "" , 1] #filter significantly DE above threshold with annotation
+sig_genes = as.list(sig_genes[!is.na(sig_genes)]) #make list and remove NAs
+
+sum(gene_annotations_supplemented[ gene_annotations_supplemented$ENSEMBL %in% sig_genes,]$NAME =="") # "Trust But Verify"
+
+vst_normalized_counts_filtered_sig = vst_normalized_counts_filtered[rownames(vst_normalized_counts_filtered) %in% sig_genes, ]
+
+topVarGenes = head( order( rowVars( vst_normalized_counts_filtered_sig ), decreasing=TRUE ), 100 ) #find 100 most significant annotated genes
+
+sample_type_4hm = as.numeric(as.factor(sample_annotations[rownames(sample_annotations) %in% colnames(vst_normalized_counts_filtered_sig), 1])) #generate sample type numeric vector for heatmap
+
+heatmap(vst_normalized_counts_filtered_sig[topVarGenes, ], 
+        ColSideColors = brewer.pal(9, "Set1")[sample_type_4hm],
+        scale="column")
+
+
