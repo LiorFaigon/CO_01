@@ -186,4 +186,11 @@ heatmap(vst_normalized_counts_filtered_sig[topVarGenes, ],
         ColSideColors = brewer.pal(9, "Set1")[sample_type_4hm],
         scale="column")
 
+# Generate a volcano plot (x-axis is the effect size and y-axis is the p-value) for this analysis. The selected 100 most significant genes should be colored.
 
+most_sig = rownames(vst_normalized_counts_filtered_sig[topVarGenes,])
+
+par(mfrow=c(1,1)) #reset par
+with(res_tab, plot(log2FoldChange, -log10(pvalue), pch=20, main="Volcano Plot")) # Make the volcano plot
+with(subset(res_tab, padj<.01 & abs(log2FoldChange)>1 ), points(log2FoldChange, -log10(pvalue), pch=20, col="blue")) # overlay with significant genes
+with(res_tab[ res_tab$ENSEMBL %in% most_sig, ], points(log2FoldChange, -log10(pvalue), pch=20, col="red")) #overlay with 100 most significant genes
