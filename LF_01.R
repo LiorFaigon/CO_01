@@ -103,13 +103,11 @@ ggplot(lib_size_vst_norm_filt, aes(type, library_size)) +
 
   # densities:
 
-library(affy)
-plotDensity(vst_, col=rep(myColors, each=3),
-            lty=c(1:ncol(counts)), xlab='Log2(count)',
-            main='Expression Distribution')
-
-ggplot(vst_normalized_counts_filtered, aes(x=vst_normalized_counts_filtered[,1])) +
-  geom_density()
+plot(density(vst_normalized_counts_filtered),main="Expression Distribution",xlab="VST normalized counts (filtered)", ylab="Density")
+for (s in 1:length(colnames(vst_normalized_counts_filtered))){
+  d <- density(vst_normalized_counts_filtered[,s])
+  lines(d)
+}
 
   # PCA:
 
@@ -127,7 +125,17 @@ ggbiplot(PCA_01,
          ) +
   ggtitle("Principal Component Analysis")
 
-PCA_01$x[,1:2]
+# The PCA plot may suggest the presence of outlier/mis-labeled samples in this dataset. Try to identify them and remove them from the downstream analysis.
+  #PCA suggests 1 mislabeled sample, no obvious outliers. checking for more mislabeled samples along suggested cluster coordinates
+
+PC_dim_12 = data.frame(PCA_01$x[,1:2])
+PC_dim_12$type = sample_annotations$type
+
+PC_dim_12[which(PC_dim_12$PC1 > 0 & PC_dim_12$type == "normal"), ] # no mislabeled normal samples
+PC_dim_12[which(PC_dim_12$PC1 < 0 & PC_dim_12$type == "lesional"), ] # found 1 mislabeled lesional sample: SRR1146216 
+vst_normalized_counts_filtered = vst_normalized_counts_filtered[ , ! colnames(vst_normalized_counts_filtered) %in% c("SRR1146216")]
+save(vst_normalized_counts_filtered, file = "vst_normalized_counts_filtered.rda") #update filtered file
+
 
 PC1genenames_pos = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=TRUE)[1:10])) # get 10 most positively influential genes for PC1
 PC1genenames_neg = rownames(data.frame(sort(PCA_01$rotation[,"PC1"], decreasing=FALSE)[1:10]))
