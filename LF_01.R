@@ -151,5 +151,16 @@ dds_filt = DESeq(dds_filt)
 
 #Export the results in a tab-separated text/CSV file: a table with genes in rows along with gene annotations and any relevant statistic.
 
-res <- results(dds)
+res = results(dds_filt)
+summary(res)
+res_tab = head(results(dds_filt, tidy=TRUE), n = length(rownames(vst_normalized_counts_filtered)))
+colnames(res_tab)[1] = "ENSEMBL"
+res_tab_DE = res_tab[ , ]
+res_tab$"padj<0.01" = res_tab$padj<0.01
 
+res_tab$"log2FC>|1|"[res_tab$padj<0.01 & res_tab$log2FoldChange > 1] = "UP"
+res_tab$"log2FC>|1|"[res_tab$padj<0.01 & res_tab$log2FoldChange < -1] = "DOWN"
+
+table$size[table$population>=500 & table$population<1000]<-2
+
+res_tab = merge(res_tab,gene_annotations_supplemented,by="ENSEMBL") # merge DE results with gene annotations to include genes with missing annotations
